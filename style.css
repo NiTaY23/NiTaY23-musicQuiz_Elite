@@ -1,0 +1,219 @@
+:root {
+    --primary: #5227FF; 
+    --accent: #B19EEF; 
+    --bg: #0a0a0a; 
+    --text: #ffffff; 
+    --card: #151515; 
+    --menu-bg: #0f0f0f;
+    --menu-width: 85%;
+}
+
+body.light-mode {
+    --bg: #f8f9fa; 
+    --text: #1a1a1a; 
+    --card: #ffffff; 
+    --menu-bg: #ffffff;
+}
+
+@media (min-width: 768px) {
+    :root {
+        --menu-width: 380px;
+    }
+}
+
+* { 
+    box-sizing: border-box; 
+    -webkit-tap-highlight-color: transparent; 
+    margin: 0; 
+    padding: 0; 
+}
+
+body { 
+    background: var(--bg); 
+    color: var(--text); 
+    font-family: 'Montserrat', sans-serif; 
+    overflow-x: hidden; 
+    /* מאפשר גלילה במידה והתוכן חורג מגובה המסך */
+    overflow-y: auto; 
+    transition: background 0.5s; 
+    direction: ltr; 
+    min-height: 100vh;
+}
+
+/* Header & Logo */
+.staggered-menu-header {
+    position: fixed; top: 0; left: 0; width: 100%; padding: 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    z-index: 3000; pointer-events: none;
+}
+.sm-logo, .sm-toggle { 
+    pointer-events: auto; 
+    background: none; 
+    border: none; 
+    color: var(--text); 
+    cursor: pointer; 
+}
+
+.sm-logo i { font-size: 1.8rem; animation: spinInfinite 4s linear infinite; }
+@keyframes spinInfinite {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Menu Layers & Panel */
+.sm-prelayers {
+    position: fixed; top: 0; right: 0; width: var(--menu-width); height: 100%; z-index: 2499; pointer-events: none;
+}
+.sm-prelayer {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: translateX(100%); 
+}
+
+.staggered-menu-panel {
+    position: fixed; top: 0; right: 0; width: var(--menu-width); height: 100%;
+    background: var(--menu-bg); z-index: 2500; transform: translateX(100%); 
+    display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(0,0,0,0.3);
+    transition: background 0.5s;
+    /* מאפשר גלילה בתוך התפריט עצמו במידת הצורך */
+    overflow-y: auto;
+}
+
+.sm-panel-inner { 
+    flex: 1; padding: 100px 30px 30px 30px; display: flex; flex-direction: column; 
+}
+
+.menu-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 40px;
+    width: 100%;
+}
+
+.theme-btn-elite-toggle { 
+    width: 50px; 
+    height: 50px; 
+    border-radius: 50%; 
+    background: var(--card); 
+    border: 2px solid var(--primary); 
+    position: relative; 
+    overflow: hidden; 
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.elite-icon-sun, .elite-icon-moon { 
+    font-size: 1.2rem; 
+    position: absolute; 
+    transition: transform 0.6s, opacity 0.6s; 
+}
+
+body.dark-mode .elite-icon-moon { color: #ffffff; opacity: 1; transform: scale(1); }
+body.dark-mode .elite-icon-sun { opacity: 0; transform: translateY(40px); }
+body.light-mode .elite-icon-moon { opacity: 0; transform: translateY(-40px); }
+body.light-mode .elite-icon-sun { color: #ffaa00; opacity: 1; transform: scale(1); }
+
+.volume-v-wrapper { 
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+#volumeSlider { 
+    -webkit-appearance: slider-vertical; width: 10px; height: 90px; 
+    background: #444; border-radius: 10px; outline: none; cursor: pointer;
+}
+
+.sm-panel-item { 
+    display: block; 
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1.8rem; 
+    font-weight: 900; 
+    color: var(--text); 
+    text-decoration: none; 
+    margin-bottom: 25px; 
+    text-align: left; 
+}
+
+.menu-footer-legal {
+    margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(128, 128, 128, 0.2);
+    opacity: 0.5; font-size: 0.65rem; line-height: 1.4; color: var(--text);
+}
+
+/* Screens - עדכון למניעת חסימת גלילה */
+.screen { 
+    position: relative; 
+    width: 100%; 
+    min-height: 100vh; 
+    display: none; 
+    align-items: center; 
+    justify-content: center; 
+    flex-direction: column; 
+    padding: 80px 20px 40px 20px; /* padding עליון כדי שהתוכן לא יתקע מתחת ללוגו */
+}
+.screen.active { display: flex; }   
+
+.elite-search-box-wrapper { 
+    width: 100%; 
+    max-width: 600px; 
+    position: relative; 
+    z-index: 1000; 
+    margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+    .elite-search-box-wrapper { max-width: 800px; }
+}
+
+#searchInput {
+    width: 100%; padding: 18px; border-radius: 15px; border: none; background: var(--card);
+    color: var(--text); border-bottom: 4px solid var(--primary); font-size: 1.1rem; text-align: center;
+}
+
+.elite-suggestions {
+    position: absolute; top: 75px; left: 0; width: 100%; background: var(--card);
+    border-radius: 12px; z-index: 5000; display: none; max-height: 200px; 
+    overflow-y: auto; border: 1px solid var(--primary);
+}
+
+.s-item { display: flex; align-items: center; gap: 12px; padding: 12px; cursor: pointer; border-bottom: 1px solid rgba(128,128,128,0.1); }
+.s-item img { width: 40px; height: 40px; border-radius: 50%; }
+
+.elite-options { 
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; 
+    width: 100%; max-width: 360px; margin: 20px auto; perspective: 1000px;
+}
+
+@media (min-width: 768px) { 
+    .elite-options { grid-template-columns: repeat(4, 1fr); max-width: 900px; gap: 25px; } 
+    .search-hero h1 { font-size: 4rem; }
+}
+
+.tilted-card-figure { width: 100%; aspect-ratio: 1/1; cursor: pointer; position: relative; border-radius: 15px; }
+.tilted-card-inner { width: 100%; height: 100%; transform-style: preserve-3d; position: relative; pointer-events: none; }
+.tilted-card-img { width: 100%; height: 100%; object-fit: cover; border: 3px solid rgba(255,255,255,0.1); border-radius: 15px; transition: border 0.3s; }
+
+.tilted-card-figure.correct .tilted-card-img { border-color: #00ff88; box-shadow: 0 0 20px #00ff88; }
+.tilted-card-figure.wrong .tilted-card-img { border-color: #ff3366; box-shadow: 0 0 20px #ff3366; }
+
+.overlay-text { 
+    position: absolute; bottom: 8px; left: 5%; width: 90%; 
+    background: rgba(0,0,0,0.85); color: #fff; font-size: 0.75rem; 
+    padding: 6px 4px; text-align: center; border-radius: 8px;
+    transform: translateZ(35px); box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.elite-play-btn { 
+    width: 100%; background: var(--primary); color: #fff; padding: 18px; 
+    border-radius: 15px; border: none; font-weight: 900; font-size: 1.1rem; 
+    margin-top: 15px; cursor: pointer; transition: transform 0.2s;
+}
+.visualizer { display: flex; gap: 5px; height: 30px; margin: 15px 0; }
+.v-bar { width: 5px; background: var(--primary); height: 5px; border-radius: 3px; transition: height 0.1s; }
+
+/* Rankings List - הוספת גלילה לרשימה */
+.rank-item { 
+    display: flex; align-items: center; justify-content: space-between; 
+    padding: 12px; background: rgba(128,128,128,0.1); 
+    border-radius: 12px; margin-bottom: 10px; width: 100%; max-width: 350px; 
+}
+.rank-item img { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }

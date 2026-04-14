@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Music Quiz Elite | Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body class="dark-mode">
+
+    <header class="staggered-menu-header">
+        <div class="sm-logo" id="mainLogo"><i class="fas fa-compact-disc"></i></div>
+        <button class="sm-toggle" id="menuToggle">
+            <span id="toggleText">Menu</span>
+            <span class="sm-icon"><span class="sm-icon-line"></span></span>
+        </button>
+    </header>
+
+    <div class="staggered-menu-wrapper" id="menuWrapper">
+        <div class="sm-prelayers">
+            <div class="sm-prelayer" style="background: #B19EEF"></div>
+            <div class="sm-prelayer" style="background: #5227FF"></div>
+        </div>
+
+        <aside class="staggered-menu-panel" id="menuPanel">
+            <div class="sm-panel-inner">
+                
+                <div class="menu-controls">
+                    <button id="themeToggle" class="theme-btn-elite-toggle">
+                        <i class="fas fa-sun elite-icon-sun"></i>
+                        <i class="fas fa-moon elite-icon-moon"></i>
+                    </button>
+                    
+                    <div class="volume-v-wrapper">
+                        <i class="fas fa-volume-up"></i>
+                        <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5">
+                        <i class="fas fa-volume-down"></i>
+                    </div>
+                </div>
+
+                <nav class="sm-panel-list">
+                    <a href="#" class="sm-panel-item" onclick="safeNavigate('home-screen')">
+                        <i class="fas fa-home"></i> <span>Home</span>
+                    </a>
+                    <a href="#" class="sm-panel-item" onclick="safeNavigate('leaderboard-screen')">
+                        <i class="fas fa-trophy"></i> <span>Ranking</span>
+                    </a>
+                    <a href="#" class="sm-panel-item" onclick="safeNavigate('settings-screen')">
+                        <i class="fas fa-cog"></i> <span>Settings</span>
+                    </a>
+                </nav>
+
+                <div class="menu-footer-legal">
+                    <p>© 2026 Music Quiz Elite</p>
+                    <p>This site uses the iTunes API for educational purposes. All audio previews and artworks are property of their respective owners and Apple Inc.</p>
+                    <p>Non-commercial use only.</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <main id="main-content">
+        <section id="home-screen" class="screen active">
+            <div class="search-hero">
+                <h1>Music Quiz <span>Elite</span></h1>
+                <div class="elite-search-box-wrapper">
+                    <input type="text" id="searchInput" placeholder="Search artist..." autocomplete="off">
+                    <div id="suggestions" class="elite-suggestions"></div>
+                    <button id="btnStart" class="elite-play-btn">START GAME</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="game-screen" class="screen">
+            <div class="game-ui">
+                <div id="tvRound" class="round-counter">1/10</div>
+                <h2 id="tvArtistName">Artist Name</h2>
+                <div class="visualizer" id="visualizer">
+                    <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
+                </div>
+                <div id="optionsGrid" class="elite-options"></div>
+            </div>
+        </section>
+
+        <section id="result-screen" class="screen">
+            <div class="content-card">
+                <img id="resImg" src="" style="width:120px; height:120px; border-radius:50%; border:3px solid var(--primary); object-fit:cover;">
+                <h2 id="resScore" style="font-size:3rem; margin:15px 0;">0/10</h2>
+                <button onclick="safeNavigate('home-screen')" class="elite-play-btn">Play Again</button>
+            </div>
+        </section>
+
+        <section id="leaderboard-screen" class="screen">
+            <div class="content-card">
+                <h2><i class="fas fa-trophy"></i> Rankings</h2>
+                <div id="leaderboardContent" class="scroll-list"></div>
+            </div>
+        </section>
+
+        <section id="settings-screen" class="screen">
+            <div class="content-card">
+                <h2>Settings</h2>
+                <button onclick="resetData()" class="elite-play-btn" style="background:#ff4d4d; margin-top:25px;">Clear All Ranks</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
+<section id="leaderboard-screen" class="screen">
+    <div class="content-card">
+        <h2><i class="fas fa-trophy"></i> Rankings</h2>
+        <div id="leaderboardContent" class="scroll-list"></div>
+    </div>
+</section>
