@@ -27,13 +27,11 @@
 
         <aside class="staggered-menu-panel" id="menuPanel">
             <div class="sm-panel-inner">
-                
                 <div class="menu-controls">
                     <button id="themeToggle" class="theme-btn-elite-toggle">
                         <i class="fas fa-sun elite-icon-sun"></i>
                         <i class="fas fa-moon elite-icon-moon"></i>
                     </button>
-                    
                     <div class="volume-v-wrapper">
                         <i class="fas fa-volume-up"></i>
                         <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5">
@@ -55,8 +53,7 @@
 
                 <div class="menu-footer-legal">
                     <p>© 2026 Music Quiz Elite</p>
-                    <p>This site uses the iTunes API for educational purposes. All audio previews and artworks are property of their respective owners and Apple Inc.</p>
-                    <p>Non-commercial use only.</p>
+                    <p>This site uses the iTunes API for educational purposes. All audio previews and artworks are property of their respective owners and Apple Inc. Non-commercial use only.</p>
                 </div>
             </div>
         </aside>
@@ -69,6 +66,16 @@
                 <div class="elite-search-box-wrapper">
                     <input type="text" id="searchInput" placeholder="Search artist..." autocomplete="off">
                     <div id="suggestions" class="elite-suggestions"></div>
+                    
+                    <div class="mode-selector">
+                        <button id="modeNormal" class="mode-btn active" onclick="setGameMode('normal')">
+                            <i class="fas fa-bolt"></i> Normal
+                        </button>
+                        <button id="modeHardcore" class="mode-btn" onclick="setGameMode('hardcore')">
+                            <i class="fas fa-skull"></i> Hardcore
+                        </button>
+                    </div>
+
                     <button id="btnStart" class="elite-play-btn">START GAME</button>
                 </div>
             </div>
@@ -76,7 +83,16 @@
 
         <section id="game-screen" class="screen">
             <div class="game-ui">
-                <div id="tvRound" class="round-counter">1/10</div>
+                <div class="game-stats-header">
+                    <div id="tvRound" class="round-counter">1/10</div>
+                </div>
+                
+                <div id="gameTimer" class="central-timer-display">00:00</div>
+
+                <div class="single-round-progress-wrapper">
+                    <div id="roundTimerBar" class="single-round-progress-bar"></div>
+                </div>
+
                 <h2 id="tvArtistName">Artist Name</h2>
                 <div class="visualizer" id="visualizer">
                     <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
@@ -86,16 +102,24 @@
         </section>
 
         <section id="result-screen" class="screen">
-            <div class="content-card">
-                <img id="resImg" src="" style="width:120px; height:120px; border-radius:50%; border:3px solid var(--primary); object-fit:cover;">
-                <h2 id="resScore" style="font-size:3rem; margin:15px 0;">0/10</h2>
+            <div class="content-card result-card">
+                <div id="badgeHardcore" class="hardcore-badge"><i class="fas fa-skull"></i> HARDCORE MODE</div>
+                <img id="resImg" src="" class="result-artist-img">
+                <h2 id="resScore">0/10</h2>
+                <p id="resTime" class="result-time-text">Time: 00:00</p>
                 <button onclick="safeNavigate('home-screen')" class="elite-play-btn">Play Again</button>
             </div>
         </section>
 
         <section id="leaderboard-screen" class="screen">
-            <div class="content-card">
+            <div class="content-card full-width-card">
                 <h2><i class="fas fa-trophy"></i> Rankings</h2>
+                
+                <div class="leaderboard-tabs">
+                    <button id="tabNormal" class="tab-btn active" onclick="switchLeaderboardTab('normal')">Normal</button>
+                    <button id="tabHardcore" class="tab-btn" onclick="switchLeaderboardTab('hardcore')">Hardcore</button>
+                </div>
+
                 <div id="leaderboardContent" class="scroll-list"></div>
             </div>
         </section>
@@ -111,10 +135,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
-<section id="leaderboard-screen" class="screen">
-    <div class="content-card">
-        <h2><i class="fas fa-trophy"></i> Rankings</h2>
-        <div id="leaderboardContent" class="scroll-list"></div>
-    </div>
-</section>
