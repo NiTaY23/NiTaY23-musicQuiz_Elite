@@ -386,13 +386,17 @@ function renderLeaderboard() {
         const badgeClass = isHardcore ? 'hardcore' : 'normal';
         const badgeText = isHardcore ? 'Hardcore' : 'Normal';
 
+        // תיקון למניעת הצגת המילה undefined במסכים ובדירוגים ישנים
+        const hasValidTime = s.time && s.time !== 'undefined';
+        const infoString = hasValidTime ? `${s.time} | ${s.date}` : s.date;
+
         return `
         <div class="rank-item">
             <span style="font-weight:900; color:var(--primary); min-width:25px;">#${i+1}</span>
             <img src="${s.img || ''}" onerror="this.src='https://via.placeholder.com/40'">
             <div style="flex:1; margin-left:12px; text-align:left;">
                 <strong style="display:block; font-size:0.9rem;">${s.name}</strong>
-                <small style="opacity:0.6; font-size:0.7rem;">${s.time} | ${s.date}</small>
+                <small style="opacity:0.6; font-size:0.7rem;">${infoString}</small>
             </div>
             <span class="game-type-indicator ${badgeClass}">${badgeText}</span>
             <span style="font-weight:900; margin-left: 10px; font-variant-numeric: tabular-nums;">${scoreDisplay}</span>
