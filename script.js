@@ -5,14 +5,29 @@ let selectedArtist = { id: -1, name: "", img: "" };
 let gameQueue = [], currentRound = 0, score = 0;
 let visualizerInterval = null;
 
+// טיימר וניהול זמן כללי
+let gameStartTime = 0;
+let timerInterval = null;
+let finalTimeStr = "00:00";
+
+// מערכת טיימר לסיבוב בודד ומצב משחק
+let gameMode = 'normal'; 
+let roundTimeLeft = 15; 
+let roundTimerInterval = null;
+const SECONDS_PER_ROUND = 15;
+
+// משתנה בוליאני שיוודא שהמשחק אכן הגיע לסיומו המלא
+let isGameFullyCompleted = false;
+
+// משתנה למעקב אחר הטאב המוצג כרגע בטבלת המובילים
+let currentLeaderboardTab = 'normal';
+
 let allArtistSongs = [];
 let playedCorrectSongIds = new Set();
-let lastRoundDistractorIds = new Set();
 
-// --- טעינת העדפות משתמש ---
+// טעינת הגדרות
 const savedTheme = localStorage.getItem('quiz_theme') || 'dark-mode';
 const savedVolume = localStorage.getItem('quiz_volume') || '0.5';
-
 document.body.className = savedTheme;
 audio.volume = parseFloat(savedVolume);
 
@@ -38,7 +53,36 @@ async function fetchJSONP(url) {
     });
 }
 
-// --- תפריט וניווט ---
+// ניווט בטוח בין מסכים ועצירת פעילויות ברקע
+function safeNavigate(id) {
+    if (isMenuOpen) document.getElementById('menuToggle').click(); 
+    audio.pause(); 
+    clearInterval(visualizerInterval);
+    clearInterval(timerInterval);
+    clearInterval(roundTimerInterval);
+    
+    const allScreens = document.querySelectorAll('.screen');
+    const targetScreen = document.getElementById(id);
+    if (targetScreen.classList.contains('active')) return;
+
+    gsap.to(".screen.active", {
+        opacity: 0, y: -10, duration: 0.2,
+        onComplete: () => {
+            allScreens.forEach(s => s.classList.remove('active'));
+            gsap.set(targetScreen, { opacity: 0, y: 10 });
+            targetScreen.classList.add('active');
+            gsap.to(targetScreen, { opacity: 1, y: 0, duration: 0.3, ease: "power2.out" });
+        }
+    });
+
+    if (id === 'leaderboard-screen') {
+        // כשנכנסים למסך הדירוגים, נטען אוטומטית לפי המוד האחרון ששיחקנו בו
+        currentLeaderboardTab = gameMode;
+        renderLeaderboard();
+    }
+}
+
+// תפריט
 document.getElementById('menuToggle').onclick = () => {
     isMenuOpen = !isMenuOpen;
     const tl = gsap.timeline();
@@ -55,58 +99,89 @@ document.getElementById('menuToggle').onclick = () => {
     }
 };
 
-function safeNavigate(id) {
-    if (isMenuOpen) document.getElementById('menuToggle').click(); 
-    
-    audio.pause(); 
-    clearInterval(visualizerInterval); 
-    
-    const allScreens = document.querySelectorAll('.screen');
-    const targetScreen = document.getElementById(id);
-    
-    // אם המסך כבר פעיל, אין צורך להריץ אנימציה
-    if (targetScreen.classList.contains('active')) return;
-
-    // אנימציית יציאה עדינה למסך הנוכחי וכניסה למסך החדש
-    gsap.to(".screen.active", {
-        opacity: 0,
-        y: -10,
-        duration: 0.2,
-        onComplete: () => {
-            allScreens.forEach(s => s.classList.remove('active'));
-            
-            // הכנת המסך החדש (שקוף ומורם מעט)
-            gsap.set(targetScreen, { opacity: 0, y: 10 });
-            targetScreen.classList.add('active');
-            
-            // אנימציית כניסה
-            gsap.to(targetScreen, {
-                opacity: 1,
-                y: 0,
-                duration: 0.3,
-                ease: "power2.out"
-            });
-        }
-    });
-
-    if (id === 'leaderboard-screen') renderLeaderboard();
-}
-
 document.getElementById('themeToggle').onclick = () => {
     document.body.classList.toggle('light-mode');
     document.body.classList.toggle('dark-mode');
-    const currentTheme = document.body.classList.contains('light-mode') ? 'light-mode' : 'dark-mode';
-    localStorage.setItem('quiz_theme', currentTheme);
+    localStorage.setItem('quiz_theme', document.body.classList.contains('light-mode') ? 'light-mode' : 'dark-mode');
 };
 
-// --- חיפוש ---
+// בורר מצב משחק במסך הבית
+window.setGameMode = (mode) => {
+    gameMode = mode;
+    document.getElementById('modeNormal').classList.toggle('active', mode === 'normal');
+    document.getElementById('modeHardcore').classList.toggle('active', mode === 'hardcore');
+};
+
+// טיימר המשחק הכללי במרכז המסך
+function startTimer() {
+    gameStartTime = Date.now();
+
+    timerInterval = setInterval(() => {
+        const diff = Date.now() - gameStartTime;
+        const mins = Math.floor(diff / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        finalTimeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        
+        const timerEl = document.getElementById('gameTimer');
+        if (timerEl) timerEl.innerText = finalTimeStr;
+    }, 1000);
+}
+
+// טיימר ספירה לאחור של השיר הנוכחי (מד פרוגרס יחיד ודק)
+function startRoundTimer() {
+    clearInterval(roundTimerInterval);
+    roundTimeLeft = SECONDS_PER_ROUND;
+    
+    const bar = document.getElementById('roundTimerBar');
+    if (bar) {
+        gsap.set(bar, { scaleX: 1 });
+        gsap.to(bar, { scaleX: 0, duration: SECONDS_PER_ROUND, ease: "none" });
+    }
+
+    roundTimerInterval = setInterval(() => {
+        roundTimeLeft--;
+        if (roundTimeLeft <= 0) {
+            clearInterval(roundTimerInterval);
+            handleRoundTimeout();
+        }
+    }, 1000);
+}
+
+function handleRoundTimeout() {
+    audio.pause();
+    const grid = document.getElementById('optionsGrid');
+    if (!grid) return;
+
+    grid.querySelectorAll('figure').forEach(f => f.classList.add('locked'));
+    grid.querySelectorAll('figure').forEach(f => {
+        if (f.dataset.correct === "true") f.classList.add('correct');
+    });
+
+    setTimeout(() => {
+        if (gameMode === 'hardcore') {
+            isGameFullyCompleted = true;
+            clearInterval(timerInterval);
+            showFinalResults();
+        } else {
+            currentRound++;
+            if (currentRound >= gameQueue.length) {
+                isGameFullyCompleted = true;
+                clearInterval(timerInterval);
+                showFinalResults();
+            } else {
+                loadRound();
+            }
+        }
+    }, 1500);
+}
+
+// חיפוש אמנים
 const searchInput = document.getElementById('searchInput');
 const suggestions = document.getElementById('suggestions');
 
 searchInput.oninput = async (e) => {
     const q = e.target.value;
     if (q.length < 2) { suggestions.style.display = 'none'; return; }
-    
     try {
         const data = await fetchJSONP(`${API}search?term=${encodeURIComponent(q)}&entity=musicArtist&limit=10`);
         const results = await Promise.all(data.results.map(async (a) => {
@@ -114,7 +189,6 @@ searchInput.oninput = async (e) => {
             const img = detail.results[1] ? detail.results[1].artworkUrl100.replace('100x100', '400x400') : "";
             return { id: a.artistId, name: a.artistName, img: img };
         }));
-
         suggestions.innerHTML = results.map(a => `
             <div class="s-item" onclick="selectArtist('${a.id}', '${a.name.replace(/'/g, "\\'")}', '${a.img}')">
                 ${a.img ? `<img src="${a.img}">` : `<i class="fas fa-user-circle"></i>`}
@@ -130,78 +204,57 @@ window.selectArtist = (id, name, img) => {
     suggestions.style.display = 'none';
 };
 
-// --- משחק ---
+// התחלת משחק
 document.getElementById('btnStart').onclick = async () => {
     if (selectedArtist.id === -1) return; 
     try {
-        // תיקון: הגדלת ה-limit ל-200 לגיוון מקסימלי
         const data = await fetchJSONP(`${API}lookup?id=${selectedArtist.id}&entity=song&limit=200`);
         let fetchedSongs = data.results.slice(1).filter(t => t.previewUrl);
-        
-        // סינון כפילויות שמות שירים
         const unique = [];
         const seen = new Set();
         fetchedSongs.forEach(s => {
             const lowName = s.trackName.toLowerCase().trim();
-            if(!seen.has(lowName)) {
-                seen.add(lowName);
-                unique.push(s);
-            }
+            if(!seen.has(lowName)) { seen.add(lowName); unique.push(s); }
         });
-
         allArtistSongs = unique;
-
-        // תיקון: הגדרת כמות סיבובים דינמית (עד 10, או פחות אם אין מספיק שירים)
-        const totalPossibleRounds = Math.min(allArtistSongs.length, 10);
-        gameQueue = [...allArtistSongs].sort(() => Math.random() - 0.5).slice(0, totalPossibleRounds);
         
-        if (gameQueue.length < 2) return alert("Not enough tracks for this artist.");
+        const totalPossibleRounds = gameMode === 'hardcore' ? allArtistSongs.length : Math.min(allArtistSongs.length, 10);
+        gameQueue = [...allArtistSongs].sort(() => Math.random() - 0.5).slice(0, totalPossibleRounds);
+        if (gameQueue.length < 2) return alert("Not enough tracks.");
         
         score = 0; currentRound = 0;
+        isGameFullyCompleted = false;
         playedCorrectSongIds.clear();
         safeNavigate('game-screen');
+        startTimer();
         loadRound();
     } catch(e) { alert("Error connecting to server."); }
 };
 
 function loadRound() {
     if (currentRound >= gameQueue.length) {
-        saveScore();
-        // הצגת הציון הסופי מתוך כמות הסיבובים שבוצעו בפועל
-        document.getElementById('resScore').innerText = `${score}/${gameQueue.length}`;
-        document.getElementById('resImg').src = selectedArtist.img;
-        safeNavigate('result-screen');
+        isGameFullyCompleted = true;
+        clearInterval(timerInterval);
+        clearInterval(roundTimerInterval);
+        showFinalResults();
         return;
     }
+    
+    startRoundTimer();
 
     const track = gameQueue[currentRound];
     playedCorrectSongIds.add(track.trackId);
-
-    // תיקון: עדכון ה-UI שיציג את כמות הסיבובים הדינמית
-    document.getElementById('tvRound').innerText = `${currentRound + 1}/${gameQueue.length}`;
+    
+    document.getElementById('tvRound').innerText = gameMode === 'hardcore' ? `Round ${currentRound + 1}` : `${currentRound + 1}/${gameQueue.length}`;
     document.getElementById('tvArtistName').innerText = selectedArtist.name;
 
     let opts = [{ name: track.trackName, correct: true, img: track.artworkUrl100.replace('100x100','400x400'), id: track.trackId }];
-    
-    // מציאת מסיחים
-    let pool = allArtistSongs.filter(t => 
-        t.trackId !== track.trackId && 
-        !playedCorrectSongIds.has(t.trackId) && 
-        !lastRoundDistractorIds.has(t.trackId)
-    );
-    
+    let pool = allArtistSongs.filter(t => t.trackId !== track.trackId && !playedCorrectSongIds.has(t.trackId));
     if(pool.length < 3) pool = allArtistSongs.filter(t => t.trackId !== track.trackId);
     pool.sort(() => Math.random() - 0.5);
-    
-    let currentDistractors = new Set();
-    // בחירה של עד 3 מסיחים (או פחות אם אין מספיק שירים בכלל לאמן)
-    const numDistractors = Math.min(pool.length, 3);
-    for(let i=0; i < numDistractors; i++) {
-        const s = pool[i];
-        opts.push({ name: s.trackName, correct: false, img: s.artworkUrl100.replace('100x100','400x400'), id: s.trackId });
-        currentDistractors.add(s.trackId);
+    for(let i=0; i < Math.min(pool.length, 3); i++) {
+        opts.push({ name: pool[i].trackName, correct: false, img: pool[i].artworkUrl100.replace('100x100','400x400'), id: pool[i].trackId });
     }
-    lastRoundDistractorIds = currentDistractors;
     opts.sort(() => Math.random() - 0.5);
 
     const grid = document.getElementById('optionsGrid');
@@ -209,26 +262,67 @@ function loadRound() {
     opts.forEach(o => {
         const fig = document.createElement('figure');
         fig.className = 'tilted-card-figure';
+        fig.dataset.correct = o.correct;
         fig.innerHTML = `<div class="tilted-card-inner"><img src="${o.img}" class="tilted-card-img"><div class="overlay-text">${o.name}</div></div>`;
         fig.onclick = () => {
             if (fig.classList.contains('locked')) return;
+            clearInterval(roundTimerInterval);
+            gsap.killTweensOf(document.getElementById('roundTimerBar'));
+
             grid.querySelectorAll('figure').forEach(f => f.classList.add('locked'));
-            if (o.correct) { fig.classList.add('correct'); score++; }
-            else { 
+            
+            if (o.correct) { 
+                fig.classList.add('correct'); 
+                score++;
+                audio.pause();
+                setTimeout(() => { currentRound++; loadRound(); }, 1500);
+            } else { 
                 fig.classList.add('wrong');
-                grid.querySelectorAll('figure').forEach((f, idx) => {
-                    if (opts[idx].correct) f.classList.add('correct');
-                });
+                grid.querySelectorAll('figure').forEach((f, idx) => { if (opts[idx].correct) f.classList.add('correct'); });
+                audio.pause();
+                
+                setTimeout(() => {
+                    if (gameMode === 'hardcore') {
+                        isGameFullyCompleted = true;
+                        clearInterval(timerInterval);
+                        showFinalResults();
+                    } else {
+                        currentRound++; 
+                        if (currentRound >= gameQueue.length) {
+                            isGameFullyCompleted = true;
+                            clearInterval(timerInterval);
+                            showFinalResults();
+                        } else {
+                            loadRound();
+                        }
+                    }
+                }, 1500);
             }
-            audio.pause();
-            setTimeout(() => { currentRound++; loadRound(); }, 1500);
         };
         grid.appendChild(fig);
     });
-
     audio.src = track.previewUrl;
-    audio.play().catch(e => console.log("Audio play blocked"));
+    audio.play().catch(e => {});
     startVis();
+}
+
+function showFinalResults() {
+    if (isGameFullyCompleted) {
+        saveScore();
+    }
+
+    const hardcoreBadge = document.getElementById('badgeHardcore');
+    if (gameMode === 'hardcore') {
+        hardcoreBadge.style.display = 'inline-flex';
+        document.getElementById('resScore').innerText = `${score} Hits`;
+    } else {
+        hardcoreBadge.style.display = 'none';
+        document.getElementById('resScore').innerText = `${score}/${gameQueue.length}`;
+    }
+
+    document.getElementById('resTime').innerText = `Time: ${finalTimeStr}`;
+    document.getElementById('resImg').src = selectedArtist.img;
+    safeNavigate('result-screen');
 }
 
 function startVis() {
@@ -244,50 +338,71 @@ document.getElementById('volumeSlider').oninput = (e) => {
 };
 
 function saveScore() {
-    try {
-        const history = JSON.parse(localStorage.getItem('music_quiz_ranks') || '[]');
-        const newEntry = { 
-            name: selectedArtist.name, 
-            score: score, 
-            total: gameQueue.length, 
-            img: selectedArtist.img, 
-            date: new Date().toLocaleDateString('he-IL') 
-        };
-        history.push(newEntry);
-        localStorage.setItem('music_quiz_ranks', JSON.stringify(history));
-        console.log("Score saved:", newEntry);
-    } catch (e) {
-        console.error("Error saving score:", e);
-    }
+    const history = JSON.parse(localStorage.getItem('music_quiz_ranks') || '[]');
+    history.push({ 
+        name: selectedArtist.name, score, total: gameQueue.length, 
+        time: finalTimeStr, img: selectedArtist.img, date: new Date().toLocaleDateString('he-IL'),
+        mode: gameMode
+    });
+    localStorage.setItem('music_quiz_ranks', JSON.stringify(history));
 }
 
+// פונקציית מעבר בין הטאבים בתוך ה-Leaderboard
+window.switchLeaderboardTab = (tab) => {
+    currentLeaderboardTab = tab;
+    document.getElementById('tabNormal').classList.toggle('active', tab === 'normal');
+    document.getElementById('tabHardcore').classList.toggle('active', tab === 'hardcore');
+    renderLeaderboard();
+};
+
+// רנדור טבלה מופרדת לחלוטין בהתאם לטאב הפעיל
 function renderLeaderboard() {
     const content = document.getElementById('leaderboardContent');
     if (!content) return;
-
-    const rawData = localStorage.getItem('music_quiz_ranks');
-    const scores = JSON.parse(rawData || '[]');
     
-    if (scores.length === 0) {
-        content.innerHTML = '<p style="margin-top:20px; opacity:0.5; text-align:center;">No rankings yet!</p>';
-        return;
+    // מעדכנים את נראות הטאבים למקרה שהפונקציה נקראה ישירות מניווט
+    document.getElementById('tabNormal').classList.toggle('active', currentLeaderboardTab === 'normal');
+    document.getElementById('tabHardcore').classList.toggle('active', currentLeaderboardTab === 'hardcore');
+
+    const scores = JSON.parse(localStorage.getItem('music_quiz_ranks') || '[]');
+    
+    // סינון התוצאות בהתאם לטאב הנבחר (אם אין שדה mode, ברירת המחדל היא normal)
+    const filteredScores = scores.filter(s => {
+        const m = s.mode || 'normal';
+        return m === currentLeaderboardTab;
+    });
+
+    if (filteredScores.length === 0) { 
+        content.innerHTML = `<p style="text-align:center; opacity:0.5; padding: 20px;">No rankings for ${currentLeaderboardTab} mode yet!</p>`; 
+        return; 
     }
     
-    // מיון לפי הניקוד הגבוה ביותר
-    const sorted = scores.sort((a, b) => b.score - a.score).slice(0, 20);
+    // מיון לפי כמות נקודות/פגיעות
+    const sorted = filteredScores.sort((a, b) => b.score - a.score).slice(0, 20);
     
-    content.innerHTML = sorted.map((s, i) => `
+    content.innerHTML = sorted.map((s, i) => {
+        const isHardcore = s.mode === 'hardcore';
+        const scoreDisplay = isHardcore ? `${s.score} Hits` : `${s.score}/${s.total}`;
+        const badgeClass = isHardcore ? 'hardcore' : 'normal';
+        const badgeText = isHardcore ? 'Hardcore' : 'Normal';
+
+        return `
         <div class="rank-item">
             <span style="font-weight:900; color:var(--primary); min-width:25px;">#${i+1}</span>
             <img src="${s.img || ''}" onerror="this.src='https://via.placeholder.com/40'">
             <div style="flex:1; margin-left:12px; text-align:left;">
                 <strong style="display:block; font-size:0.9rem;">${s.name}</strong>
-                <small style="opacity:0.6; font-size:0.7rem;">${s.date}</small>
+                <small style="opacity:0.6; font-size:0.7rem;">${s.time} | ${s.date}</small>
             </div>
-            <span style="font-weight:900; white-space:nowrap; margin-left:10px;">${s.score}/${s.total || 10}</span>
-        </div>`).join('');
+            <span class="game-type-indicator ${badgeClass}">${badgeText}</span>
+            <span style="font-weight:900; margin-left: 10px; font-variant-numeric: tabular-nums;">${scoreDisplay}</span>
+        </div>`;
+    }).join('');
 }
 
 function resetData() {
-    if(confirm("Reset all scores?")) { localStorage.removeItem('music_quiz_ranks'); renderLeaderboard(); }
+    if(confirm("Reset all scores?")) { 
+        localStorage.removeItem('music_quiz_ranks'); 
+        renderLeaderboard(); 
+    }
 }
