@@ -13,7 +13,7 @@
 
     <header class="staggered-menu-header">
         <div class="sm-logo" id="mainLogo"><i class="fas fa-compact-disc"></i></div>
-        <button class="sm-toggle" id="menuToggle" type="button">
+        <button class="sm-toggle" id="menuToggle">
             <span id="toggleText">Menu</span>
             <span class="sm-icon"><span class="sm-icon-line"></span></span>
         </button>
@@ -28,7 +28,7 @@
         <aside class="staggered-menu-panel" id="menuPanel">
             <div class="sm-panel-inner">
                 <div class="menu-controls">
-                    <button id="themeToggle" class="theme-btn-elite-toggle" type="button">
+                    <button id="themeToggle" class="theme-btn-elite-toggle">
                         <i class="fas fa-sun elite-icon-sun"></i>
                         <i class="fas fa-moon elite-icon-moon"></i>
                     </button>
@@ -40,20 +40,20 @@
                 </div>
 
                 <nav class="sm-panel-list">
-                    <a href="javascript:void(0)" class="sm-panel-item" onclick="safeNavigate('home-screen')">
+                    <a href="#" class="sm-panel-item" onclick="safeNavigate('home-screen')">
                         <i class="fas fa-home"></i> <span>Home</span>
                     </a>
-                    <a href="javascript:void(0)" class="sm-panel-item" onclick="safeNavigate('leaderboard-screen')">
+                    <a href="#" class="sm-panel-item" onclick="safeNavigate('leaderboard-screen')">
                         <i class="fas fa-trophy"></i> <span>Ranking</span>
                     </a>
-                    <a href="javascript:void(0)" class="sm-panel-item" onclick="safeNavigate('settings-screen')">
+                    <a href="#" class="sm-panel-item" onclick="safeNavigate('settings-screen')">
                         <i class="fas fa-cog"></i> <span>Settings</span>
                     </a>
                 </nav>
 
                 <div class="menu-footer-legal">
-                    <p>© 2026 Music Quiz Elite[cite: 1]</p>
-                    <p>This site uses the iTunes API for educational purposes. All audio previews and artworks are property of their respective owners and Apple Inc. Non-commercial use only.[cite: 1]</p>
+                    <p>© 2026 Music Quiz Elite</p>
+                    <p>This site uses the iTunes API for educational purposes. All audio previews and artworks are property of their respective owners and Apple Inc. Non-commercial use only.</p>
                 </div>
             </div>
         </aside>
@@ -62,28 +62,21 @@
     <main id="main-content">
         <section id="home-screen" class="screen active">
             <div class="search-hero">
-                <h1>Music Quiz <span>Elite</span>[cite: 1]</h1>
+                <h1>Music Quiz <span>Elite</span></h1>
                 <div class="elite-search-box-wrapper">
-                    <div class="search-input-container">
-                        <i class="fas fa-search search-icon-left"></i>
-                        <input type="text" id="searchInput" placeholder="Search artist..." autocomplete="off">
-                        <button id="clearSearchBtn" class="clear-search-btn" style="display: none;" type="button"><i class="fas fa-times"></i></button>
-                    </div>
+                    <input type="text" id="searchInput" placeholder="Search artist..." autocomplete="off">
                     <div id="suggestions" class="elite-suggestions"></div>
                     
                     <div class="mode-selector">
-                        <button id="modeNormal" class="mode-btn active" type="button" onclick="setGameMode('normal')">
-                            <i class="fas fa-bolt"></i> Normal[cite: 1]
+                        <button id="modeNormal" class="mode-btn active" onclick="setGameMode('normal')">
+                            <i class="fas fa-bolt"></i> Normal
                         </button>
-                        <button id="modeOneSec" class="mode-btn" type="button" onclick="setGameMode('onesec')">
-                            <i class="fas fa-stopwatch"></i> 1-Sec
-                        </button>
-                        <button id="modeHardcore" class="mode-btn" type="button" onclick="setGameMode('hardcore')">
-                            <i class="fas fa-skull"></i> Hardcore[cite: 1]
+                        <button id="modeHardcore" class="mode-btn" onclick="setGameMode('hardcore')">
+                            <i class="fas fa-skull"></i> Hardcore
                         </button>
                     </div>
 
-                    <button id="btnStart" class="elite-play-btn" type="button">START GAME[cite: 1]</button>
+                    <button id="btnStart" class="elite-play-btn">START GAME</button>
                 </div>
             </div>
         </section>
@@ -91,23 +84,18 @@
         <section id="game-screen" class="screen">
             <div class="game-ui">
                 <div class="game-stats-header">
-                    <div id="tvRound" class="round-counter">1/10[cite: 1]</div>
+                    <div id="tvRound" class="round-counter">1/10</div>
                 </div>
                 
-                <div id="gameTimer" class="central-timer-display">00:00[cite: 1]</div>
+                <div id="gameTimer" class="central-timer-display">00:00</div>
 
                 <div class="single-round-progress-wrapper">
                     <div id="roundTimerBar" class="single-round-progress-bar"></div>
                 </div>
 
-                <h2 id="tvArtistName">Artist Name[cite: 1]</h2>
-                
-                <button id="btnReplayOneSec" class="replay-one-sec-btn" type="button" onclick="replayOneSecond()" style="display: none;">
-                    <i class="fas fa-redo"></i> Play 1-Sec Again
-                </button>
-
+                <h2 id="tvArtistName">Artist Name</h2>
                 <div class="visualizer" id="visualizer">
-                    <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>[cite: 1]
+                    <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
                 </div>
                 <div id="optionsGrid" class="elite-options"></div>
             </div>
@@ -115,23 +103,21 @@
 
         <section id="result-screen" class="screen">
             <div class="content-card result-card">
-                <div id="badgeHardcore" class="hardcore-badge"><i class="fas fa-skull"></i> HARDCORE MODE[cite: 1]</div>
-                <div id="badgeOneSec" class="hardcore-badge" style="background: var(--primary);"><i class="fas fa-stopwatch"></i> 1-SEC MODE</div>
-                <img id="resImg" src="" class="result-artist-img" alt="Artist">
-                <h2 id="resScore">0/10[cite: 1]</h2>
-                <p id="resTime" class="result-time-text">Time: 00:00[cite: 1]</p>
-                <button onclick="safeNavigate('home-screen')" class="elite-play-btn" type="button">Play Again[cite: 1]</button>
+                <div id="badgeHardcore" class="hardcore-badge"><i class="fas fa-skull"></i> HARDCORE MODE</div>
+                <img id="resImg" src="" class="result-artist-img">
+                <h2 id="resScore">0/10</h2>
+                <p id="resTime" class="result-time-text">Time: 00:00</p>
+                <button onclick="safeNavigate('home-screen')" class="elite-play-btn">Play Again</button>
             </div>
         </section>
 
         <section id="leaderboard-screen" class="screen">
             <div class="content-card full-width-card">
-                <h2><i class="fas fa-trophy"></i> Rankings[cite: 1]</h2>
+                <h2><i class="fas fa-trophy"></i> Rankings</h2>
                 
                 <div class="leaderboard-tabs">
-                    <button id="tabNormal" class="tab-btn active" type="button" onclick="switchLeaderboardTab('normal')">Normal[cite: 1]</button>
-                    <button id="tabOneSec" class="tab-btn" type="button" onclick="switchLeaderboardTab('onesec')">1-Sec</button>
-                    <button id="tabHardcore" class="tab-btn" type="button" onclick="switchLeaderboardTab('hardcore')">Hardcore[cite: 1]</button>
+                    <button id="tabNormal" class="tab-btn active" onclick="switchLeaderboardTab('normal')">Normal</button>
+                    <button id="tabHardcore" class="tab-btn" onclick="switchLeaderboardTab('hardcore')">Hardcore</button>
                 </div>
 
                 <div id="leaderboardContent" class="scroll-list"></div>
@@ -140,8 +126,8 @@
 
         <section id="settings-screen" class="screen">
             <div class="content-card">
-                <h2>Settings[cite: 1]</h2>
-                <button onclick="resetData()" class="elite-play-btn" style="background:#ff4d4d; margin-top:25px;" type="button">Clear All Ranks[cite: 1]</button>
+                <h2>Settings</h2>
+                <button onclick="resetData()" class="elite-play-btn" style="background:#ff4d4d; margin-top:25px;">Clear All Ranks</button>
             </div>
         </section>
     </main>
