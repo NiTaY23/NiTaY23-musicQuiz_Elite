@@ -71,6 +71,9 @@
                         <button id="modeNormal" class="mode-btn active" onclick="setGameMode('normal')">
                             <i class="fas fa-bolt"></i> Normal
                         </button>
+                        <button id="modeOneSec" class="mode-btn" onclick="setGameMode('onesec')">
+                            <i class="fas fa-stopwatch"></i> 1-Sec
+                        </button>
                         <button id="modeHardcore" class="mode-btn" onclick="setGameMode('hardcore')">
                             <i class="fas fa-skull"></i> Hardcore
                         </button>
@@ -94,6 +97,12 @@
                 </div>
 
                 <h2 id="tvArtistName">Artist Name</h2>
+                
+                <!-- כפתור השמעה חוזרת למוד השנייה האחת -->
+                <button id="btnReplayOneSec" class="replay-one-sec-btn" onclick="replayOneSecond()" style="display: none;">
+                    <i class="fas fa-redo"></i> Play 1-Sec Again
+                </button>
+
                 <div class="visualizer" id="visualizer">
                     <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
                 </div>
@@ -104,6 +113,7 @@
         <section id="result-screen" class="screen">
             <div class="content-card result-card">
                 <div id="badgeHardcore" class="hardcore-badge"><i class="fas fa-skull"></i> HARDCORE MODE</div>
+                <div id="badgeOneSec" class="hardcore-badge" style="background: var(--primary);"><i class="fas fa-stopwatch"></i> 1-SEC MODE</div>
                 <img id="resImg" src="" class="result-artist-img">
                 <h2 id="resScore">0/10</h2>
                 <p id="resTime" class="result-time-text">Time: 00:00</p>
@@ -117,6 +127,7 @@
                 
                 <div class="leaderboard-tabs">
                     <button id="tabNormal" class="tab-btn active" onclick="switchLeaderboardTab('normal')">Normal</button>
+                    <button id="tabOneSec" class="tab-btn" onclick="switchLeaderboardTab('onesec')">1-Sec</button>
                     <button id="tabHardcore" class="tab-btn" onclick="switchLeaderboardTab('hardcore')">Hardcore</button>
                 </div>
 
