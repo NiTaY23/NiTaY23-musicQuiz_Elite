@@ -5,32 +5,26 @@ let selectedArtist = { id: -1, name: "", img: "" };
 let gameQueue = [], currentRound = 0, score = 0;
 let visualizerInterval = null;
 
-// טיימר וניהול זמן כללי
 let gameStartTime = 0;
 let timerInterval = null;
-let finalTimeStr = "00:00";
+let finalTimeStr = "00:00";[cite: 1, 2]
 
-// מערכת טיימר לסיבוב בודד ומצב משחק
 let gameMode = 'normal'; 
 let roundTimeLeft = 15; 
 let roundTimerInterval = null;
-const SECONDS_PER_ROUND = 15;
+const SECONDS_PER_ROUND = 15;[cite: 2]
 
-// משתנה לעצירת השמעה אחרי שנייה במוד 1-sec
 let oneSecTimeout = null;
-
-// משתנה בוליאני שיוודא שהמשחק אכן הגיע לסיומו המלא
-let isGameFullyCompleted = false;
-
-// משתנה למעקב אחר הטאב המוצג כרגע בטבלת המובילים
-let currentLeaderboardTab = 'normal';
+let isGameFullyCompleted = false;[cite: 2]
+let currentLeaderboardTab = 'normal';[cite: 2]
 
 let allArtistSongs = [];
-let playedCorrectSongIds = new Set();
+let playedCorrectSongIds = new Set();[cite: 2]
 
-// טעינת הגדרות
-const savedTheme = localStorage.getItem('quiz_theme') || 'dark-mode';
-const savedVolume = localStorage.getItem('quiz_volume') || '0.5';
+let searchDebounceTimer = null;
+
+const savedTheme = localStorage.getItem('quiz_theme') || 'dark-mode';[cite: 2]
+const savedVolume = localStorage.getItem('quiz_volume') || '0.5';[cite: 2]
 document.body.className = savedTheme;
 audio.volume = parseFloat(savedVolume);
 
@@ -56,7 +50,6 @@ async function fetchJSONP(url) {
     });
 }
 
-// ניווט בטוח בין מסכים ועצירת פעילויות ברקע
 function safeNavigate(id) {
     if (isMenuOpen) document.getElementById('menuToggle').click(); 
     audio.pause(); 
@@ -85,7 +78,6 @@ function safeNavigate(id) {
     }
 }
 
-// תפריט
 document.getElementById('menuToggle').onclick = () => {
     isMenuOpen = !isMenuOpen;
     const tl = gsap.timeline();
@@ -98,17 +90,16 @@ document.getElementById('menuToggle').onclick = () => {
         document.getElementById('toggleText').innerText = "Close";
     } else {
         tl.to([panel, ...preLayers], { xPercent: 0, duration: 0.4, stagger: 0.05, ease: "power2.in" });
-        document.getElementById('toggleText').innerText = "Menu";
+        document.getElementById('toggleText').innerText = "Menu";[cite: 2]
     }
 };
 
 document.getElementById('themeToggle').onclick = () => {
     document.body.classList.toggle('light-mode');
     document.body.classList.toggle('dark-mode');
-    localStorage.setItem('quiz_theme', document.body.classList.contains('light-mode') ? 'light-mode' : 'dark-mode');
+    localStorage.setItem('quiz_theme', document.body.classList.contains('light-mode') ? 'light-mode' : 'dark-mode');[cite: 2]
 };
 
-// בורר מצב משחק במסך הבית
 window.setGameMode = (mode) => {
     gameMode = mode;
     document.getElementById('modeNormal').classList.toggle('active', mode === 'normal');
@@ -116,7 +107,6 @@ window.setGameMode = (mode) => {
     document.getElementById('modeHardcore').classList.toggle('active', mode === 'hardcore');
 };
 
-// טיימר המשחק הכללי במרכז המסך
 function startTimer() {
     gameStartTime = Date.now();
 
@@ -124,14 +114,13 @@ function startTimer() {
         const diff = Date.now() - gameStartTime;
         const mins = Math.floor(diff / 60000);
         const secs = Math.floor((diff % 60000) / 1000);
-        finalTimeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        finalTimeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;[cite: 2]
         
         const timerEl = document.getElementById('gameTimer');
         if (timerEl) timerEl.innerText = finalTimeStr;
     }, 1000);
 }
 
-// טיימר ספירה לאחור של השיר הנוכחי (מד פרוגרס יחיד ודק)
 function startRoundTimer() {
     clearInterval(roundTimerInterval);
     roundTimeLeft = SECONDS_PER_ROUND;
@@ -180,36 +169,74 @@ function handleRoundTimeout() {
     }, 1500);
 }
 
-// חיפוש אמנים
+// שיפור חיפוש: הוספת Debounce, כפתור איפוס מהיר, וטעינה חלקה
 const searchInput = document.getElementById('searchInput');
 const suggestions = document.getElementById('suggestions');
+const clearSearchBtn = document.getElementById('clearSearchBtn');
 
-searchInput.oninput = async (e) => {
-    const q = e.target.value;
-    if (q.length < 2) { suggestions.style.display = 'none'; return; }
-    try {
-        const data = await fetchJSONP(`${API}search?term=${encodeURIComponent(q)}&entity=musicArtist&limit=10`);
-        const results = await Promise.all(data.results.map(async (a) => {
-            const detail = await fetchJSONP(`${API}lookup?id=${a.artistId}&entity=album&limit=1`);
-            const img = detail.results[1] ? detail.results[1].artworkUrl100.replace('100x100', '400x400') : "";
-            return { id: a.artistId, name: a.artistName, img: img };
-        }));
-        suggestions.innerHTML = results.map(a => `
-            <div class="s-item" onclick="selectArtist('${a.id}', '${a.name.replace(/'/g, "\\'")}', '${a.img}')">
-                ${a.img ? `<img src="${a.img}">` : `<i class="fas fa-user-circle"></i>`}
-                <span>${a.name}</span>
-            </div>`).join('');
-        suggestions.style.display = 'block';
-    } catch(e) { console.error(e); }
+searchInput.oninput = (e) => {
+    const q = e.target.value.trim();
+    if (q.length > 0) {
+        clearSearchBtn.style.display = 'block';
+    } else {
+        clearSearchBtn.style.display = 'none';
+        suggestions.style.display = 'none';
+    }
+
+    clearTimeout(searchDebounceTimer);
+    if (q.length < 2) { 
+        suggestions.style.display = 'none'; 
+        return; 
+    }
+
+    suggestions.innerHTML = `<div class="s-item" style="justify-content: center; opacity: 0.6;"><i class="fas fa-spinner fa-spin"></i><span>Searching artists...</span></div>`;
+    suggestions.style.display = 'block';
+
+    searchDebounceTimer = setTimeout(async () => {
+        try {
+            const data = await fetchJSONP(`${API}search?term=${encodeURIComponent(q)}&entity=musicArtist&limit=6`);
+            if (!data.results || data.results.length === 0) {
+                suggestions.innerHTML = `<div class="s-item" style="justify-content: center; opacity: 0.5;"><span>No artists found</span></div>`;
+                return;
+            }
+
+            const results = await Promise.all(data.results.map(async (a) => {
+                try {
+                    const detail = await fetchJSONP(`${API}lookup?id=${a.artistId}&entity=album&limit=1`);
+                    const img = detail.results && detail.results[1] && detail.results[1].artworkUrl100 ? detail.results[1].artworkUrl100.replace('100x100', '400x400') : "";
+                    return { id: a.artistId, name: a.artistName, img: img };
+                } catch(err) {
+                    return { id: a.artistId, name: a.artistName, img: "" };
+                }
+            }));
+
+            suggestions.innerHTML = results.map(a => `
+                <div class="s-item" onclick="selectArtist('${a.id}', '${a.name.replace(/'/g, "\\'")}', '${a.img}')">
+                    ${a.img ? `<img src="${a.img}">` : `<i class="fas fa-user-circle" style="font-size:40px; color:var(--primary);"></i>`}
+                    <span>${a.name}</span>
+                </div>`).join('');
+            suggestions.style.display = 'block';
+        } catch(e) { 
+            suggestions.style.display = 'none'; 
+        }
+    }, 300);
+};
+
+clearSearchBtn.onclick = () => {
+    searchInput.value = '';
+    clearSearchBtn.style.display = 'none';
+    suggestions.style.display = 'none';
+    selectedArtist = { id: -1, name: "", img: "" };
+    searchInput.focus();
 };
 
 window.selectArtist = (id, name, img) => {
     selectedArtist = { id, name, img };
     searchInput.value = name;
     suggestions.style.display = 'none';
+    clearSearchBtn.style.display = 'block';
 };
 
-// התחלת משחק
 document.getElementById('btnStart').onclick = async () => {
     if (selectedArtist.id === -1) return; 
     try {
@@ -225,18 +252,17 @@ document.getElementById('btnStart').onclick = async () => {
         
         const totalPossibleRounds = (gameMode === 'hardcore' || gameMode === 'onesec') ? allArtistSongs.length : Math.min(allArtistSongs.length, 10);
         gameQueue = [...allArtistSongs].sort(() => Math.random() - 0.5).slice(0, totalPossibleRounds);
-        if (gameQueue.length < 2) return alert("Not enough tracks.");
+        if (gameQueue.length < 2) return alert("Not enough tracks.");[cite: 2]
         
         score = 0; currentRound = 0;
         isGameFullyCompleted = false;
-        playedCorrectSongIds.clear();
+        playedCorrectSongIds.clear();[cite: 2]
         safeNavigate('game-screen');
         startTimer();
         loadRound();
-    } catch(e) { alert("Error connecting to server."); }
+    } catch(e) { alert("Error connecting to server.");[cite: 2] }
 };
 
-// פונקציית השמעה חוזרת לשנייה אחת
 window.replayOneSecond = () => {
     if (gameMode !== 'onesec') return;
     audio.currentTime = 0;
@@ -260,13 +286,12 @@ function loadRound() {
     startRoundTimer();
 
     const track = gameQueue[currentRound];
-    playedCorrectSongIds.add(track.trackId);
+    playedCorrectSongIds.add(track.trackId);[cite: 2]
     
     const roundText = (gameMode === 'hardcore' || gameMode === 'onesec') ? `Round ${currentRound + 1}` : `${currentRound + 1}/${gameQueue.length}`;
     document.getElementById('tvRound').innerText = roundText;
     document.getElementById('tvArtistName').innerText = selectedArtist.name;
 
-    // הצגת או הסתרת כפתור 1-Sec בהתאם למוד
     const replayBtn = document.getElementById('btnReplayOneSec');
     if (gameMode === 'onesec') {
         replayBtn.style.display = 'inline-flex';
@@ -364,7 +389,7 @@ function showFinalResults() {
         document.getElementById('resScore').innerText = `${score}/${gameQueue.length}`;
     }
 
-    document.getElementById('resTime').innerText = `Time: ${finalTimeStr}`;
+    document.getElementById('resTime').innerText = `Time: ${finalTimeStr}`;[cite: 1, 2]
     document.getElementById('resImg').src = selectedArtist.img;
     safeNavigate('result-screen');
 }
@@ -378,46 +403,44 @@ function startVis() {
 
 document.getElementById('volumeSlider').oninput = (e) => {
     audio.volume = e.target.value;
-    localStorage.setItem('quiz_volume', e.target.value);
+    localStorage.setItem('quiz_volume', e.target.value);[cite: 2]
 };
 
 function saveScore() {
-    const history = JSON.parse(localStorage.getItem('music_quiz_ranks') || '[]');
+    const history = JSON.parse(localStorage.getItem('music_quiz_ranks') || '[]');[cite: 2]
     history.push({ 
         name: selectedArtist.name, score, total: gameQueue.length, 
-        time: finalTimeStr, img: selectedArtist.img, date: new Date().toLocaleDateString('he-IL'),
+        time: finalTimeStr, img: selectedArtist.img, date: new Date().toLocaleDateString('he-IL'),[cite: 2]
         mode: gameMode
     });
-    localStorage.setItem('music_quiz_ranks', JSON.stringify(history));
+    localStorage.setItem('music_quiz_ranks', JSON.stringify(history));[cite: 2]
 }
 
-// פונקציית מעבר בין הטאבים בתוך ה-Leaderboard
 window.switchLeaderboardTab = (tab) => {
-    currentLeaderboardTab = tab;
+    currentLeaderboardTab = tab;[cite: 2]
     document.getElementById('tabNormal').classList.toggle('active', tab === 'normal');
     document.getElementById('tabOneSec').classList.toggle('active', tab === 'onesec');
     document.getElementById('tabHardcore').classList.toggle('active', tab === 'hardcore');
     renderLeaderboard();
 };
 
-// רנדור טבלה בהתאם לטאב הפעיל
 function renderLeaderboard() {
     const content = document.getElementById('leaderboardContent');
     if (!content) return;
     
-    document.getElementById('tabNormal').classList.toggle('active', currentLeaderboardTab === 'normal');
+    document.getElementById('tabNormal').classList.toggle('active', currentLeaderboardTab === 'normal');[cite: 2]
     document.getElementById('tabOneSec').classList.toggle('active', currentLeaderboardTab === 'onesec');
-    document.getElementById('tabHardcore').classList.toggle('active', currentLeaderboardTab === 'hardcore');
+    document.getElementById('tabHardcore').classList.toggle('active', currentLeaderboardTab === 'hardcore');[cite: 2]
 
-    const scores = JSON.parse(localStorage.getItem('music_quiz_ranks') || '[]');
+    const scores = JSON.parse(localStorage.getItem('music_quiz_ranks') || '[]');[cite: 2]
     
     const filteredScores = scores.filter(s => {
         const m = s.mode || 'normal';
-        return m === currentLeaderboardTab;
+        return m === currentLeaderboardTab;[cite: 2]
     });
 
     if (filteredScores.length === 0) { 
-        content.innerHTML = `<p style="text-align:center; opacity:0.5; padding: 20px;">No rankings for ${currentLeaderboardTab} mode yet!</p>`; 
+        content.innerHTML = `<p style="text-align:center; opacity:0.5; padding: 20px;">No rankings for ${currentLeaderboardTab} mode yet!</p>`;[cite: 2]
         return; 
     }
     
@@ -431,12 +454,12 @@ function renderLeaderboard() {
         if (isHardcore || isOneSec) scoreDisplay = `${s.score} Hits`;
 
         let badgeClass = 'normal';
-        let badgeText = 'Normal';
-        if (isHardcore) { badgeClass = 'hardcore'; badgeText = 'Hardcore'; }
+        let badgeText = 'Normal';[cite: 2]
+        if (isHardcore) { badgeClass = 'hardcore'; badgeText = 'Hardcore'; }[cite: 2]
         if (isOneSec) { badgeClass = 'onesec'; badgeText = '1-Sec'; }
 
         const hasValidTime = s.time && s.time !== 'undefined';
-        const infoString = hasValidTime ? `${s.time} | ${s.date}` : s.date;
+        const infoString = hasValidTime ? `${s.time} | ${s.date}` : s.date;[cite: 2]
 
         return `
         <div class="rank-item">
@@ -453,8 +476,8 @@ function renderLeaderboard() {
 }
 
 function resetData() {
-    if(confirm("Reset all scores?")) { 
-        localStorage.removeItem('music_quiz_ranks'); 
+    if(confirm("Reset all scores?")) {[cite: 2]
+        localStorage.removeItem('music_quiz_ranks');[cite: 2]
         renderLeaderboard(); 
     }
 }
