@@ -16,6 +16,9 @@ let roundTimeLeft = 15;
 let roundTimerInterval = null;
 const SECONDS_PER_ROUND = 15;
 
+// משתנה לעצירת השמעה אחרי שנייה במוד 1-sec
+let oneSecTimeout = null;
+
 // משתנה בוליאני שיוודא שהמשחק אכן הגיע לסיומו המלא
 let isGameFullyCompleted = false;
 
@@ -60,6 +63,7 @@ function safeNavigate(id) {
     clearInterval(visualizerInterval);
     clearInterval(timerInterval);
     clearInterval(roundTimerInterval);
+    clearTimeout(oneSecTimeout);
     
     const allScreens = document.querySelectorAll('.screen');
     const targetScreen = document.getElementById(id);
@@ -76,7 +80,6 @@ function safeNavigate(id) {
     });
 
     if (id === 'leaderboard-screen') {
-        // כשנכנסים למסך הדירוגים, נטען אוטומטית לפי המוד האחרון ששיחקנו בו
         currentLeaderboardTab = gameMode;
         renderLeaderboard();
     }
@@ -109,6 +112,7 @@ document.getElementById('themeToggle').onclick = () => {
 window.setGameMode = (mode) => {
     gameMode = mode;
     document.getElementById('modeNormal').classList.toggle('active', mode === 'normal');
+    document.getElementById('modeOneSec').classList.toggle('active', mode === 'onesec');
     document.getElementById('modeHardcore').classList.toggle('active', mode === 'hardcore');
 };
 
@@ -149,6 +153,7 @@ function startRoundTimer() {
 
 function handleRoundTimeout() {
     audio.pause();
+    clearTimeout(oneSecTimeout);
     const grid = document.getElementById('optionsGrid');
     if (!grid) return;
 
@@ -218,7 +223,7 @@ document.getElementById('btnStart').onclick = async () => {
         });
         allArtistSongs = unique;
         
-        const totalPossibleRounds = gameMode === 'hardcore' ? allArtistSongs.length : Math.min(allArtistSongs.length, 10);
+        const totalPossibleRounds = (gameMode === 'hardcore' || gameMode === 'onesec') ? allArtistSongs.length : Math.min(allArtistSongs.length, 10);
         gameQueue = [...allArtistSongs].sort(() => Math.random() - 0.5).slice(0, totalPossibleRounds);
         if (gameQueue.length < 2) return alert("Not enough tracks.");
         
@@ -231,11 +236,23 @@ document.getElementById('btnStart').onclick = async () => {
     } catch(e) { alert("Error connecting to server."); }
 };
 
+// פונקציית השמעה חוזרת לשנייה אחת
+window.replayOneSecond = () => {
+    if (gameMode !== 'onesec') return;
+    audio.currentTime = 0;
+    audio.play().catch(e => {});
+    clearTimeout(oneSecTimeout);
+    oneSecTimeout = setTimeout(() => {
+        audio.pause();
+    }, 1000);
+};
+
 function loadRound() {
     if (currentRound >= gameQueue.length) {
         isGameFullyCompleted = true;
         clearInterval(timerInterval);
         clearInterval(roundTimerInterval);
+        clearTimeout(oneSecTimeout);
         showFinalResults();
         return;
     }
@@ -245,8 +262,17 @@ function loadRound() {
     const track = gameQueue[currentRound];
     playedCorrectSongIds.add(track.trackId);
     
-    document.getElementById('tvRound').innerText = gameMode === 'hardcore' ? `Round ${currentRound + 1}` : `${currentRound + 1}/${gameQueue.length}`;
+    const roundText = (gameMode === 'hardcore' || gameMode === 'onesec') ? `Round ${currentRound + 1}` : `${currentRound + 1}/${gameQueue.length}`;
+    document.getElementById('tvRound').innerText = roundText;
     document.getElementById('tvArtistName').innerText = selectedArtist.name;
+
+    // הצגת או הסתרת כפתור 1-Sec בהתאם למוד
+    const replayBtn = document.getElementById('btnReplayOneSec');
+    if (gameMode === 'onesec') {
+        replayBtn.style.display = 'inline-flex';
+    } else {
+        replayBtn.style.display = 'none';
+    }
 
     let opts = [{ name: track.trackName, correct: true, img: track.artworkUrl100.replace('100x100','400x400'), id: track.trackId }];
     let pool = allArtistSongs.filter(t => t.trackId !== track.trackId && !playedCorrectSongIds.has(t.trackId));
@@ -267,6 +293,7 @@ function loadRound() {
         fig.onclick = () => {
             if (fig.classList.contains('locked')) return;
             clearInterval(roundTimerInterval);
+            clearTimeout(oneSecTimeout);
             gsap.killTweensOf(document.getElementById('roundTimerBar'));
 
             grid.querySelectorAll('figure').forEach(f => f.classList.add('locked'));
@@ -282,7 +309,7 @@ function loadRound() {
                 audio.pause();
                 
                 setTimeout(() => {
-                    if (gameMode === 'hardcore') {
+                    if (gameMode === 'hardcore' || gameMode === 'onesec') {
                         isGameFullyCompleted = true;
                         clearInterval(timerInterval);
                         showFinalResults();
@@ -301,8 +328,18 @@ function loadRound() {
         };
         grid.appendChild(fig);
     });
+
     audio.src = track.previewUrl;
+    audio.currentTime = 0;
     audio.play().catch(e => {});
+
+    if (gameMode === 'onesec') {
+        clearTimeout(oneSecTimeout);
+        oneSecTimeout = setTimeout(() => {
+            audio.pause();
+        }, 1000);
+    }
+
     startVis();
 }
 
@@ -312,11 +349,18 @@ function showFinalResults() {
     }
 
     const hardcoreBadge = document.getElementById('badgeHardcore');
+    const oneSecBadge = document.getElementById('badgeOneSec');
+    
+    hardcoreBadge.style.display = 'none';
+    oneSecBadge.style.display = 'none';
+
     if (gameMode === 'hardcore') {
         hardcoreBadge.style.display = 'inline-flex';
         document.getElementById('resScore').innerText = `${score} Hits`;
+    } else if (gameMode === 'onesec') {
+        oneSecBadge.style.display = 'inline-flex';
+        document.getElementById('resScore').innerText = `${score} Hits`;
     } else {
-        hardcoreBadge.style.display = 'none';
         document.getElementById('resScore').innerText = `${score}/${gameQueue.length}`;
     }
 
@@ -351,22 +395,22 @@ function saveScore() {
 window.switchLeaderboardTab = (tab) => {
     currentLeaderboardTab = tab;
     document.getElementById('tabNormal').classList.toggle('active', tab === 'normal');
+    document.getElementById('tabOneSec').classList.toggle('active', tab === 'onesec');
     document.getElementById('tabHardcore').classList.toggle('active', tab === 'hardcore');
     renderLeaderboard();
 };
 
-// רנדור טבלה מופרדת לחלוטין בהתאם לטאב הפעיל
+// רנדור טבלה בהתאם לטאב הפעיל
 function renderLeaderboard() {
     const content = document.getElementById('leaderboardContent');
     if (!content) return;
     
-    // מעדכנים את נראות הטאבים למקרה שהפונקציה נקראה ישירות מניווט
     document.getElementById('tabNormal').classList.toggle('active', currentLeaderboardTab === 'normal');
+    document.getElementById('tabOneSec').classList.toggle('active', currentLeaderboardTab === 'onesec');
     document.getElementById('tabHardcore').classList.toggle('active', currentLeaderboardTab === 'hardcore');
 
     const scores = JSON.parse(localStorage.getItem('music_quiz_ranks') || '[]');
     
-    // סינון התוצאות בהתאם לטאב הנבחר (אם אין שדה mode, ברירת המחדל היא normal)
     const filteredScores = scores.filter(s => {
         const m = s.mode || 'normal';
         return m === currentLeaderboardTab;
@@ -377,16 +421,20 @@ function renderLeaderboard() {
         return; 
     }
     
-    // מיון לפי כמות נקודות/פגיעות
     const sorted = filteredScores.sort((a, b) => b.score - a.score).slice(0, 20);
     
     content.innerHTML = sorted.map((s, i) => {
         const isHardcore = s.mode === 'hardcore';
-        const scoreDisplay = isHardcore ? `${s.score} Hits` : `${s.score}/${s.total}`;
-        const badgeClass = isHardcore ? 'hardcore' : 'normal';
-        const badgeText = isHardcore ? 'Hardcore' : 'Normal';
+        const isOneSec = s.mode === 'onesec';
+        
+        let scoreDisplay = `${s.score}/${s.total}`;
+        if (isHardcore || isOneSec) scoreDisplay = `${s.score} Hits`;
 
-        // תיקון למניעת הצגת המילה undefined במסכים ובדירוגים ישנים
+        let badgeClass = 'normal';
+        let badgeText = 'Normal';
+        if (isHardcore) { badgeClass = 'hardcore'; badgeText = 'Hardcore'; }
+        if (isOneSec) { badgeClass = 'onesec'; badgeText = '1-Sec'; }
+
         const hasValidTime = s.time && s.time !== 'undefined';
         const infoString = hasValidTime ? `${s.time} | ${s.date}` : s.date;
 
